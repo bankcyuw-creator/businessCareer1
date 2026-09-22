@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>過去問ドリル（共有版）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#14213D;
+    --ink-soft:#2C3A5E;
+    --paper:#FBF8F1;
+    --paper-dim:#F1ECE0;
+    --line:#D8D0BC;
+    --teal:#2A7F76;
+    --teal-deep:#1E5F58;
+    --moss:#4F7A46;
+    --moss-bg:#E8F0E2;
+    --coral:#C1502E;
+    --coral-bg:#F6E4DC;
+    --amber:#B8863B;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--ink);
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    color:var(--ink);
+    -webkit-tap-highlight-color:transparent;
+  }
+  #app{
+    max-width:560px;
+    margin:0 auto;
+    min-height:100vh;
+    background:var(--paper);
+    display:flex;
+    flex-direction:column;
+  }
+  header{
+    background:var(--ink);
+    color:var(--paper);
+    padding:20px 20px 16px;
+    position:relative;
+  }
+  header .exam-label{
+    font-family:'Shippori Mincho', serif;
+    font-size:22px;
+    font-weight:700;
+    letter-spacing:.02em;
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+  }
+  header input.exam-name{
+    background:transparent;
+    border:none;
+    border-bottom:1px solid rgba(251,248,241,.35);
+    color:var(--paper);
+    font-family:'Shippori Mincho', serif;
+    font-size:22px;
+    font-weight:700;
+    padding:2px 0;
+    width:100%;
+    outline:none;
+  }
+  header .sub{
+    margin-top:4px;
+    font-size:12.5px;
+    color:#A9B3C9;
+  }
+  nav.tabs{
+    display:flex;
+    background:var(--ink);
+    border-top:1px solid var(--ink-soft);
+  }
+  nav.tabs button{
+    flex:1;
+    background:none;
+    border:none;
+    color:#8C97B4;
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    font-size:14px;
+    font-weight:500;
+    padding:12px 4px 10px;
+    cursor:pointer;
+    border-bottom:2px solid transparent;
+  }
+  nav.tabs button.active{
+    color:var(--paper);
+    border-bottom:2px solid var(--teal);
+  }
+  main{
+    flex:1;
+    padding:18px 18px 40px;
+  }
+  h2.section-title{
+    font-family:'Shippori Mincho', serif;
+    font-size:17px;
+    margin:0 0 12px;
+    color:var(--ink);
+  }
+  .card{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:16px;
+    margin-bottom:14px;
+  }
+  .drop{
+    border:1.5px dashed var(--line);
+    border-radius:4px;
+    padding:26px 16px;
+    text-align:center;
+    color:var(--ink-soft);
+    font-size:13.5px;
+    margin-bottom:14px;
+  }
+  .drop.drag{ border-color:var(--teal); background:var(--moss-bg); }
+  .file-input-wrap{
+    display:flex;
+    gap:10px;
+    justify-content:center;
+    margin-top:12px;
+    flex-wrap:wrap;
+  }
+  .btn{
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    font-size:14px;
+    font-weight:500;
+    padding:10px 18px;
+    border-radius:3px;
+    border:1px solid var(--ink);
+    background:var(--ink);
+    color:var(--paper);
+    cursor:pointer;
+  }
+  .btn.outline{
+    background:transparent;
+    color:var(--ink);
+  }
+  .btn.teal{ background:var(--teal); border-color:var(--teal); }
+  .btn:disabled{ opacity:.45; cursor:not-allowed; }
+  .thumbs{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-top:12px;
+  }
+  .thumb{
+    width:64px; height:64px;
+    object-fit:cover;
+    border-radius:3px;
+    border:1px solid var(--line);
+  }
+  .status{
+    font-size:13px;
+    color:var(--teal-deep);
+    margin-top:10px;
+  }
+  .status.err{ color:var(--coral); }
+  .qnum{
+    display:inline-block;
+    font-family:'Shippori Mincho', serif;
+    font-size:12px;
+    color:#fff;
+    background:var(--ink-soft);
+    border-radius:2px;
+    padding:2px 8px;
+    margin-bottom:8px;
+  }
+  .review-item{ position:relative; }
+  .review-item textarea, .review-item input[type=text]{
+    width:100%;
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    font-size:14px;
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:8px;
+    margin:4px 0 10px;
+    color:var(--ink);
+  }
+  .review-item textarea{ min-height:52px; resize:vertical; }
+  .choice-row{ display:flex; align-items:center; gap:8px; margin:4px 0; }
+  .choice-row .mark{
+    font-family:'Shippori Mincho', serif;
+    font-weight:700;
+    width:18px;
+    flex-shrink:0;
+  }
+  .choice-row input[type=radio]{ flex-shrink:0; }
+  .field-label{ font-size:11.5px; color:var(--ink-soft); margin-bottom:2px; display:block; }
+  .remove-link{
+    position:absolute; top:0; right:0;
+    font-size:12px; color:var(--coral);
+    background:none; border:none; cursor:pointer;
+    text-decoration:underline;
+  }
+  .stat-row{
+    display:flex; gap:10px; margin-bottom:16px;
+  }
+  .stat{
+    flex:1;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:14px 10px;
+    text-align:center;
+  }
+  .stat .num{
+    font-family:'Shippori Mincho', serif;
+    font-size:26px;
+    color:var(--ink);
+    display:block;
+  }
+  .stat .label{ font-size:11.5px; color:var(--ink-soft); }
+  .mode-toggle{
+    display:flex; gap:8px; margin-bottom:16px;
+  }
+  .mode-toggle button{
+    flex:1;
+    padding:9px 4px;
+    font-size:13px;
+    border:1px solid var(--line);
+    background:#fff;
+    border-radius:3px;
+    color:var(--ink-soft);
+    cursor:pointer;
+  }
+  .mode-toggle button.sel{
+    border-color:var(--ink);
+    color:var(--ink);
+    background:var(--paper-dim);
+    font-weight:700;
+  }
+  .progress{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin-bottom:8px;
+    display:flex;
+    justify-content:space-between;
+  }
+  .qcard{
+    background:#fff;
+    border:1px solid var(--line);
+    border-left:4px solid var(--ink);
+    border-radius:3px;
+    padding:18px 16px;
+    margin-bottom:16px;
+  }
+  .qcard .qtext{
+    font-size:15.5px;
+    line-height:1.65;
+    white-space:pre-wrap;
+    overflow-wrap:anywhere;
+    word-break:break-word;
+  }
+  .choices{ display:flex; flex-direction:column; gap:9px; }
+  .choice-btn{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    text-align:left;
+    background:#fff;
+    border:1.5px solid var(--line);
+    border-radius:3px;
+    padding:11px 12px;
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    font-size:14.5px;
+    line-height:1.5;
+    color:var(--ink);
+    cursor:pointer;
+    width:100%;
+  }
+  .choice-btn .label-text{
+    flex:1;
+    min-width:0;
+    overflow-wrap:anywhere;
+    word-break:break-word;
+  }
+  .choice-btn .mark{
+    font-family:'Shippori Mincho', serif;
+    font-weight:700;
+    flex-shrink:0;
+  }
+  .choice-btn.correct{ border-color:var(--moss); background:var(--moss-bg); }
+  .choice-btn.wrong{ border-color:var(--coral); background:var(--coral-bg); }
+  .choice-btn:disabled{ cursor:default; }
+  .explain{
+    margin-top:16px;
+    background:var(--paper-dim);
+    border-radius:3px;
+    padding:14px;
+    font-size:13.5px;
+    line-height:1.7;
+    white-space:pre-wrap;
+    overflow-wrap:anywhere;
+    word-break:break-word;
+  }
+  .explain .tag{
+    font-family:'Shippori Mincho', serif;
+    font-weight:700;
+    font-size:12.5px;
+    margin-right:6px;
+  }
+  .result-banner{
+    font-family:'Shippori Mincho', serif;
+    font-weight:700;
+    font-size:15px;
+    margin-bottom:14px;
+  }
+  .result-banner.ok{ color:var(--moss); }
+  .result-banner.ng{ color:var(--coral); }
+  .list-item{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:12px 14px;
+    margin-bottom:10px;
+    font-size:13.5px;
+    position:relative;
+  }
+  .list-item .q-preview{
+    line-height:1.5;
+    padding-right:50px;
+  }
+  .list-item .del{
+    position:absolute; top:10px; right:12px;
+    font-size:12px; color:var(--coral);
+    background:none; border:none; cursor:pointer;
+    text-decoration:underline;
+  }
+  .empty{
+    text-align:center;
+    color:var(--ink-soft);
+    font-size:13.5px;
+    padding:30px 10px;
+  }
+  .summary-card{
+    text-align:center;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:30px 16px;
+  }
+  .summary-card .big{
+    font-family:'Shippori Mincho', serif;
+    font-size:40px;
+    color:var(--ink);
+  }
+
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="exam-label">
+      <input class="exam-name" id="examNameInput" placeholder="資格名を入力（例：〇〇検定3級）"/>
+    </div>
+    <div class="sub">問題集を撮影 → AIが読み取り → 4択で演習</div>
+  </header>
+  <nav class="tabs">
+    <button data-tab="import" class="active">取り込み</button>
+    <button data-tab="study">学習</button>
+    <button data-tab="list">問題一覧</button>
+  </nav>
+  <main id="main"></main>
+</div>
+
+<script>
+const STORAGE_KEY = 'question-bank';
+const EXAM_NAME_KEY = 'exam-name';
+let bank = [];
+let reviewItems = null; // items pending review after extraction
+let currentTab = 'import';
+let quizSession = null; // {order:[idx...], pos, correctCount, answeredIdx, selected}
+let studyMode = 'random';
+
+const mainEl = document.getElementById('main');
+const examNameInput = document.getElementById('examNameInput');
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+
+let usingSharedFile = false;
+
+async function loadBank(){
+  // まず同じ場所に置かれた questions.json（端末間で共有するマスターデータ）を読みに行く
+  try{
+    const resp = await fetch('questions.json', { cache: 'no-store' });
+    if(resp.ok){
+      const data = await resp.json();
+      if(Array.isArray(data)){
+        bank = data.map(q=>({ id: q.id || uid(), question: q.question||'', choices: q.choices||['','','',''], correctIndex: (typeof q.correctIndex==='number')?q.correctIndex:null, explanation: q.explanation||'' }));
+        usingSharedFile = true;
+      }
+    }
+  }catch(e){ /* questions.json が無い/読めない場合は下のlocalStorageにフォールバック */ }
+
+  if(!usingSharedFile){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      bank = raw ? JSON.parse(raw) : [];
+    }catch(e){ bank = []; }
+  }
+  try{
+    const name = localStorage.getItem(EXAM_NAME_KEY);
+    if(name) examNameInput.value = name;
+  }catch(e){}
+}
+async function saveBank(){
+  // 端末内にも常にバックアップとして保存しておく
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(bank)); }
+  catch(e){ console.error('save failed', e); }
+}
+function downloadQuestionsJson(){
+  const blob = new Blob([JSON.stringify(bank, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'questions.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 2000);
+}
+let examNameTimer;
+examNameInput.addEventListener('input', ()=>{
+  clearTimeout(examNameTimer);
+  examNameTimer = setTimeout(()=>{
+    try{ localStorage.setItem(EXAM_NAME_KEY, examNameInput.value); }catch(e){}
+  }, 500);
+});
+
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentTab = btn.dataset.tab;
+    if(currentTab !== 'study') quizSession = null;
+    render();
+  });
+});
+
+function normalizeQuestions(parsed){
+  if(!Array.isArray(parsed)) throw new Error('データの形式が正しくありません（配列ではありません）。');
+  return parsed.map(q=>({
+    id: uid(),
+    question: q.question || '',
+    choices: Array.isArray(q.choices) && q.choices.length===4 ? q.choices : ['','','',''],
+    correctIndex: (typeof q.correctIndex === 'number' && q.correctIndex>=0 && q.correctIndex<=3) ? q.correctIndex : null,
+    explanation: q.explanation || ''
+  }));
+}
+
+function render(){
+  if(currentTab==='import') renderImport();
+  else if(currentTab==='study') renderStudy();
+  else renderList();
+}
+
+function renderImport(){
+  mainEl.innerHTML = '';
+  const h = document.createElement('h2');
+  h.className='section-title';
+  h.textContent = '問題を取り込む';
+  mainEl.appendChild(h);
+
+  const card = document.createElement('div');
+  card.className='card';
+  card.innerHTML = `
+    <div style="font-size:13.5px; line-height:1.7; color:var(--ink-soft);">
+      ① チャット画面で、問題集のページ写真をClaudeに送ってください（複数枚OK）。<br>
+      ② Claudeが作ったJSONファイルをダウンロードするか、テキストをコピーしてください。<br>
+      ③ 下の「ファイルを選ぶ」でそのファイルを選ぶ（またはテキストを貼り付け）→「読み込む」。<br>
+      ④ 保存後、「問題一覧」タブから questions.json をダウンロードし、GitHubに上書きアップロードすると他の端末にも反映されます。
+    </div>
+    <div style="margin-top:12px;">
+      <label class="btn outline" for="fileInput" style="display:inline-block;">ファイルを選ぶ（.json/.txt）</label>
+      <input type="file" id="fileInput" accept=".json,.txt,application/json,text/plain" style="display:none;">
+      <span id="fileNameLabel" style="font-size:12.5px; color:var(--ink-soft); margin-left:8px;"></span>
+    </div>
+    <textarea id="pasteBox" placeholder='ここにClaudeが出力したJSONを貼り付け（またはファイルを選ぶと自動で入ります）' style="width:100%; min-height:120px; margin-top:12px; font-family:monospace; font-size:12.5px; border:1px solid var(--line); border-radius:3px; padding:10px;"></textarea>
+    <div style="margin-top:10px;">
+      <button class="btn teal" id="parseBtn">読み込む</button>
+    </div>
+    <div class="status" id="importStatus"></div>
+  `;
+  mainEl.appendChild(card);
+
+  const statusEl = card.querySelector('#importStatus');
+  const fileInput = card.querySelector('#fileInput');
+  const fileNameLabel = card.querySelector('#fileNameLabel');
+  const pasteBox = card.querySelector('#pasteBox');
+
+  fileInput.addEventListener('change', ()=>{
+    const f = fileInput.files[0];
+    if(!f) return;
+    fileNameLabel.textContent = f.name;
+    const reader = new FileReader();
+    reader.onload = ()=>{ pasteBox.value = reader.result; };
+    reader.onerror = ()=>{ statusEl.className='status err'; statusEl.textContent='ファイルの読み込みに失敗しました。'; };
+    reader.readAsText(f, 'UTF-8');
+  });
+
+  card.querySelector('#parseBtn').addEventListener('click', ()=>{
+    statusEl.className = 'status';
+    statusEl.textContent = '';
+    const raw = pasteBox.value.trim();
+    if(!raw){ statusEl.className='status err'; statusEl.textContent='ファイルを選ぶか、JSONを貼り付けてください。'; return; }
+    let cleaned = raw.replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
+    try{
+      const parsed = JSON.parse(cleaned);
+      const items = normalizeQuestions(parsed);
+      if(items.length===0){ statusEl.className='status err'; statusEl.textContent='問題が0件でした。'; return; }
+      reviewItems = items;
+      renderReview();
+    }catch(e){
+      statusEl.className='status err';
+      statusEl.textContent = '読み込みに失敗しました: ' + e.message;
+    }
+  });
+
+  if(reviewItems){ renderReview(); }
+}
+
+function renderReview(){
+  let reviewSection = document.getElementById('reviewSection');
+  if(reviewSection) reviewSection.remove();
+  reviewSection = document.createElement('div');
+  reviewSection.id = 'reviewSection';
+
+  const h = document.createElement('h2');
+  h.className='section-title';
+  h.style.marginTop='22px';
+  h.textContent = `読み取り結果（${reviewItems.length}問）— 確認して保存`;
+  reviewSection.appendChild(h);
+
+  reviewItems.forEach((item, idx)=>{
+    const div = document.createElement('div');
+    div.className = 'card review-item';
+    const marks = ['ア','イ','ウ','エ'];
+    div.innerHTML = `
+      <button class="remove-link" data-idx="${idx}">削除</button>
+      <span class="qnum">問題 ${idx+1}</span>
+      <span class="field-label">問題文</span>
+      <textarea data-field="question" data-idx="${idx}">${escapeHtml(item.question)}</textarea>
+      <span class="field-label">選択肢（正解をマーク）</span>
+      ${marks.map((m,ci)=>`
+        <div class="choice-row">
+          <span class="mark">${m}</span>
+          <input type="radio" name="correct-${idx}" data-idx="${idx}" data-ci="${ci}" class="correct-radio" ${item.correctIndex===ci?'checked':''}>
+          <input type="text" data-field="choice" data-idx="${idx}" data-ci="${ci}" value="${escapeAttr(item.choices[ci]||'')}">
+        </div>
+      `).join('')}
+      <span class="field-label">解説</span>
+      <textarea data-field="explanation" data-idx="${idx}">${escapeHtml(item.explanation)}</textarea>
+    `;
+    reviewSection.appendChild(div);
+  });
+
+  const actions = document.createElement('div');
+  actions.style.display='flex';
+  actions.style.gap='10px';
+  actions.innerHTML = `
+    <button class="btn teal" id="saveAllBtn">まとめて保存（${reviewItems.length}問）</button>
+    <button class="btn outline" id="discardBtn">破棄</button>
+  `;
+  reviewSection.appendChild(actions);
+
+  mainEl.appendChild(reviewSection);
+
+  reviewSection.querySelectorAll('textarea[data-field], input[type=text][data-field]').forEach(el=>{
+    el.addEventListener('input', ()=>{
+      const idx = +el.dataset.idx;
+      if(el.dataset.field==='question') reviewItems[idx].question = el.value;
+      else if(el.dataset.field==='explanation') reviewItems[idx].explanation = el.value;
+      else if(el.dataset.field==='choice') reviewItems[idx].choices[+el.dataset.ci] = el.value;
+    });
+  });
+  reviewSection.querySelectorAll('.correct-radio').forEach(el=>{
+    el.addEventListener('change', ()=>{
+      reviewItems[+el.dataset.idx].correctIndex = +el.dataset.ci;
+    });
+  });
+  reviewSection.querySelectorAll('.remove-link').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      reviewItems.splice(+el.dataset.idx, 1);
+      renderReview();
+    });
+  });
+  reviewSection.querySelector('#discardBtn').addEventListener('click', ()=>{
+    reviewItems = null;
+    render();
+  });
+  reviewSection.querySelector('#saveAllBtn').addEventListener('click', async ()=>{
+    bank = bank.concat(reviewItems.map(it=>({...it, id: uid()})));
+    await saveBank();
+    reviewItems = null;
+    render();
+  });
+}
+
+function escapeHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escapeAttr(s){ return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function renderStudy(){
+  mainEl.innerHTML = '';
+  if(quizSession && !quizSession.finished){
+    renderQuizQuestion();
+    return;
+  }
+  if(quizSession && quizSession.finished){
+    renderQuizSummary();
+    return;
+  }
+  const h = document.createElement('h2');
+  h.className='section-title';
+  h.textContent = '学習を始める';
+  mainEl.appendChild(h);
+
+  const statRow = document.createElement('div');
+  statRow.className='stat-row';
+  statRow.innerHTML = `
+    <div class="stat"><span class="num">${bank.length}</span><span class="label">保存済み問題</span></div>
+  `;
+  mainEl.appendChild(statRow);
+
+  if(bank.length===0){
+    const empty = document.createElement('div');
+    empty.className='empty';
+    empty.textContent = 'まだ問題がありません。「取り込み」タブから写真を追加してください。';
+    mainEl.appendChild(empty);
+    return;
+  }
+
+  const card = document.createElement('div');
+  card.className='card';
+  card.innerHTML = `
+    <span class="field-label">出題順</span>
+    <div class="mode-toggle">
+      <button data-mode="random" class="${studyMode==='random'?'sel':''}">ランダム</button>
+      <button data-mode="order" class="${studyMode==='order'?'sel':''}">登録順</button>
+    </div>
+    <button class="btn teal" id="startBtn" style="width:100%;">クイズを開始（全${bank.length}問）</button>
+  `;
+  mainEl.appendChild(card);
+  card.querySelectorAll('.mode-toggle button').forEach(b=>{
+    b.addEventListener('click', ()=>{ studyMode = b.dataset.mode; renderStudy(); });
+  });
+  card.querySelector('#startBtn').addEventListener('click', ()=>{
+    let order = bank.map((_,i)=>i);
+    if(studyMode==='random'){
+      for(let i=order.length-1;i>0;i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [order[i],order[j]]=[order[j],order[i]];
+      }
+    }
+    quizSession = { order, pos:0, correctCount:0, selected:null, revealed:false, finished:false };
+    renderStudy();
+  });
+}
+
+function renderQuizQuestion(){
+  const idx = quizSession.order[quizSession.pos];
+  const q = bank[idx];
+  const marks = ['ア','イ','ウ','エ'];
+
+  const progress = document.createElement('div');
+  progress.className='progress';
+  progress.innerHTML = `<span>問題 ${quizSession.pos+1} / ${quizSession.order.length}</span><span>正解 ${quizSession.correctCount}</span>`;
+  mainEl.appendChild(progress);
+
+  const qcard = document.createElement('div');
+  qcard.className='qcard';
+  qcard.innerHTML = `<div class="qtext">${escapeHtml(q.question)}</div>`;
+  mainEl.appendChild(qcard);
+
+  const choicesWrap = document.createElement('div');
+  choicesWrap.className='choices';
+  q.choices.forEach((c, ci)=>{
+    const b = document.createElement('button');
+    b.className='choice-btn';
+    b.innerHTML = `<span class="mark">${marks[ci]}</span><span class="label-text">${escapeHtml(c)}</span>`;
+    if(quizSession.revealed){
+      b.disabled = true;
+      if(q.correctIndex===ci) b.classList.add('correct');
+      else if(quizSession.selected===ci) b.classList.add('wrong');
+    } else {
+      b.addEventListener('click', ()=>{
+        quizSession.selected = ci;
+        quizSession.revealed = true;
+        if(q.correctIndex!==null && ci===q.correctIndex) quizSession.correctCount++;
+        renderStudy();
+      });
+    }
+    choicesWrap.appendChild(b);
+  });
+  mainEl.appendChild(choicesWrap);
+
+  if(quizSession.revealed){
+    const banner = document.createElement('div');
+    const isCorrect = q.correctIndex!==null && quizSession.selected===q.correctIndex;
+    banner.className = 'result-banner ' + (isCorrect?'ok':'ng');
+    banner.style.marginTop='16px';
+    banner.textContent = q.correctIndex===null ? '正解が未設定の問題です' : (isCorrect ? '正解' : '不正解 — 正解は「'+marks[q.correctIndex]+'」');
+    mainEl.appendChild(banner);
+
+    if(q.explanation){
+      const ex = document.createElement('div');
+      ex.className='explain';
+      ex.innerHTML = `<span class="tag">解説</span>${escapeHtml(q.explanation)}`;
+      mainEl.appendChild(ex);
+    }
+
+    const nextBtn = document.createElement('button');
+    nextBtn.className='btn teal';
+    nextBtn.style.width='100%';
+    nextBtn.style.marginTop='16px';
+    nextBtn.textContent = quizSession.pos+1 < quizSession.order.length ? '次の問題へ' : '結果を見る';
+    nextBtn.addEventListener('click', ()=>{
+      if(quizSession.pos+1 < quizSession.order.length){
+        quizSession.pos++;
+        quizSession.selected = null;
+        quizSession.revealed = false;
+        renderStudy();
+      } else {
+        quizSession.finished = true;
+        renderStudy();
+      }
+    });
+    mainEl.appendChild(nextBtn);
+  }
+}
+
+function renderQuizSummary(){
+  const total = quizSession.order.length;
+  const correct = quizSession.correctCount;
+  const rate = total? Math.round((correct/total)*100) : 0;
+  const card = document.createElement('div');
+  card.className='summary-card';
+  card.innerHTML = `
+    <div class="label" style="color:var(--ink-soft); font-size:13px;">結果</div>
+    <div class="big">${correct} / ${total}</div>
+    <div style="color:var(--ink-soft); font-size:13.5px; margin-top:4px;">正答率 ${rate}%</div>
+    <button class="btn teal" id="retryBtn" style="margin-top:20px; width:100%;">もう一度挑戦する</button>
+  `;
+  mainEl.appendChild(card);
+  card.querySelector('#retryBtn').addEventListener('click', ()=>{
+    quizSession = null;
+    renderStudy();
+  });
+}
+
+function renderList(){
+  mainEl.innerHTML = '';
+  const h = document.createElement('h2');
+  h.className='section-title';
+  h.textContent = `問題一覧（${bank.length}問）`;
+  mainEl.appendChild(h);
+
+  const syncCard = document.createElement('div');
+  syncCard.className='card';
+  syncCard.innerHTML = `
+    <div style="font-size:12.5px; color:var(--ink-soft); line-height:1.6;">
+      ${usingSharedFile
+        ? 'このページと同じ場所にある questions.json を読み込んでいます。他の端末でも同じURLを開けば同じ問題が見られます。'
+        : 'questions.json が見つからなかったため、この端末内の保存データを表示しています。'}
+    </div>
+    <button class="btn outline" id="downloadJsonBtn" style="margin-top:10px; width:100%;">questions.json をダウンロード</button>
+    <div style="font-size:11.5px; color:var(--ink-soft); margin-top:6px;">ダウンロード後、GitHubリポジトリの questions.json を上書きアップロードすると、他の端末にも反映されます。</div>
+  `;
+  mainEl.appendChild(syncCard);
+  syncCard.querySelector('#downloadJsonBtn').addEventListener('click', downloadQuestionsJson);
+
+  if(bank.length===0){
+    const empty = document.createElement('div');
+    empty.className='empty';
+    empty.textContent = 'まだ問題が登録されていません。';
+    mainEl.appendChild(empty);
+    return;
+  }
+
+  bank.forEach((q, idx)=>{
+    const div = document.createElement('div');
+    div.className='list-item';
+    const marks=['ア','イ','ウ','エ'];
+    const correctLabel = q.correctIndex!==null ? '設定済み' : '未設定';
+    div.innerHTML = `
+      <button class="del" data-idx="${idx}">削除</button>
+      <div class="q-preview">${escapeHtml(q.question.slice(0,70))}${q.question.length>70?'…':''}</div>
+      <div style="margin-top:6px; color:var(--ink-soft); font-size:12px;">正解データ: ${correctLabel}</div>
+    `;
+    mainEl.appendChild(div);
+  });
+
+  mainEl.querySelectorAll('.del').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      bank.splice(+btn.dataset.idx, 1);
+      await saveBank();
+      renderList();
+    });
+  });
+
+  if(bank.length>0){
+    const clearBtn = document.createElement('button');
+    clearBtn.className='btn outline';
+    clearBtn.style.marginTop='10px';
+    clearBtn.textContent = 'すべて削除';
+    clearBtn.addEventListener('click', async ()=>{
+      if(confirm('保存済みの問題をすべて削除しますか？')){
+        bank = [];
+        await saveBank();
+        renderList();
+      }
+    });
+    mainEl.appendChild(clearBtn);
+  }
+}
+
+(async function init(){
+  await loadBank();
+  render();
+})();
+</script>
+</body>
+</html>
