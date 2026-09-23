@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>過去問ドリル（共有版）</title>
+<title>過去問ドリル（クラウド同期版）</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -367,67 +367,72 @@
   <main id="main"></main>
 </div>
 
-<script>
-const STORAGE_KEY = 'question-bank-2';
-const EXAM_NAME_KEY = 'exam-name-2';
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyANasMCuhADCdGzMKa47hfiefTw3pO979w",
+  authDomain: "businesscareer-85874.firebaseapp.com",
+  projectId: "businesscareer-85874",
+  storageBucket: "businesscareer-85874.firebasestorage.app",
+  messagingSenderId: "278824254210",
+  appId: "1:278824254210:web:611aea9bb8847d0f8ea01b"
+};
+const EXAM_ID = 'exam2';
+
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+const bankDocRef = doc(db, 'questionBanks', EXAM_ID);
+
 let bank = [];
 let reviewItems = null; // items pending review after extraction
 let currentTab = 'import';
 let quizSession = null; // {order:[idx...], pos, correctCount, answeredIdx, selected}
 let studyMode = 'random';
+let syncStatus = 'connecting'; // connecting | synced | offline
 
 const mainEl = document.getElementById('main');
 const examNameInput = document.getElementById('examNameInput');
 
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
 
-let usingSharedFile = false;
-
 async function loadBank(){
-  // まず同じ場所に置かれた questions2.json（端末間で共有するマスターデータ）を読みに行く
   try{
-    const resp = await fetch('questions2.json', { cache: 'no-store' });
-    if(resp.ok){
-      const data = await resp.json();
-      if(Array.isArray(data)){
-        bank = data.map(q=>({ id: q.id || uid(), question: q.question||'', choices: q.choices||['','','',''], correctIndex: (typeof q.correctIndex==='number')?q.correctIndex:null, explanation: q.explanation||'' }));
-        usingSharedFile = true;
-      }
+    const snap = await getDoc(bankDocRef);
+    if(snap.exists()){
+      const data = snap.data();
+      bank = Array.isArray(data.questions) ? data.questions : [];
+      if(data.examName) examNameInput.value = data.examName;
     }
-  }catch(e){ /* questions2.json が無い/読めない場合は下のlocalStorageにフォールバック */ }
+    syncStatus = 'synced';
+  }catch(e){ syncStatus = 'offline'; console.error(e); }
 
-  if(!usingSharedFile){
-    try{
-      const raw = localStorage.getItem(STORAGE_KEY);
-      bank = raw ? JSON.parse(raw) : [];
-    }catch(e){ bank = []; }
-  }
-  try{
-    const name = localStorage.getItem(EXAM_NAME_KEY);
-    if(name) examNameInput.value = name;
-  }catch(e){}
+  // 他の端末での変更をリアルタイムに反映する
+  onSnapshot(bankDocRef, (snap)=>{
+    if(snap.exists()){
+      const data = snap.data();
+      bank = Array.isArray(data.questions) ? data.questions : [];
+    }
+    syncStatus = 'synced';
+    if(currentTab==='list' && !reviewItems){ render(); }
+  }, ()=>{ syncStatus = 'offline'; });
 }
 async function saveBank(){
-  // 端末内にも常にバックアップとして保存しておく
-  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(bank)); }
-  catch(e){ console.error('save failed', e); }
-}
-function downloadQuestionsJson(){
-  const blob = new Blob([JSON.stringify(bank, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'questions2.json';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(()=>URL.revokeObjectURL(url), 2000);
+  try{
+    await setDoc(bankDocRef, { questions: bank, examName: examNameInput.value||'' }, { merge: true });
+    syncStatus = 'synced';
+  }catch(e){
+    syncStatus = 'offline';
+    console.error('save failed', e);
+    alert('保存に失敗しました。通信状態を確認してもう一度お試しください。');
+  }
 }
 let examNameTimer;
 examNameInput.addEventListener('input', ()=>{
   clearTimeout(examNameTimer);
-  examNameTimer = setTimeout(()=>{
-    try{ localStorage.setItem(EXAM_NAME_KEY, examNameInput.value); }catch(e){}
+  examNameTimer = setTimeout(async ()=>{
+    try{ await setDoc(bankDocRef, { examName: examNameInput.value }, { merge: true }); }catch(e){}
   }, 500);
 });
 
@@ -472,7 +477,7 @@ function renderImport(){
       ① チャット画面で、問題集のページ写真をClaudeに送ってください（複数枚OK）。<br>
       ② Claudeが作ったJSONファイルをダウンロードするか、テキストをコピーしてください。<br>
       ③ 下の「ファイルを選ぶ」でそのファイルを選ぶ（またはテキストを貼り付け）→「読み込む」。<br>
-      ④ 保存後、「問題一覧」タブから questions2.json をダウンロードし、GitHubに上書きアップロードすると他の端末にも反映されます。
+      ④ 保存すると自動的にクラウドに同期され、他の端末でも同じ問題が表示されます。
     </div>
     <div style="margin-top:12px;">
       <label class="btn outline" for="fileInput" style="display:inline-block;">ファイルを選ぶ（.json/.txt）</label>
@@ -660,6 +665,21 @@ function renderStudy(){
   });
 }
 
+async function deleteCurrentQuizQuestion(){
+  const idx = quizSession.order[quizSession.pos];
+  bank.splice(idx, 1);
+  await saveBank();
+  quizSession.order.splice(quizSession.pos, 1);
+  quizSession.order = quizSession.order.map(i => i > idx ? i - 1 : i);
+  if(quizSession.order.length === 0 || quizSession.pos >= quizSession.order.length){
+    quizSession.finished = true;
+  } else {
+    quizSession.selected = null;
+    quizSession.revealed = false;
+  }
+  renderStudy();
+}
+
 function renderQuizQuestion(){
   const idx = quizSession.order[quizSession.pos];
   const q = bank[idx];
@@ -729,6 +749,18 @@ function renderQuizQuestion(){
       }
     });
     mainEl.appendChild(nextBtn);
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className='btn outline';
+    deleteBtn.style.width='100%';
+    deleteBtn.style.marginTop='8px';
+    deleteBtn.textContent = 'この問題を削除する（今後出題しない）';
+    deleteBtn.addEventListener('click', ()=>{
+      if(confirm('この問題を削除します。よろしいですか？')){
+        deleteCurrentQuizQuestion();
+      }
+    });
+    mainEl.appendChild(deleteBtn);
   }
 }
 
@@ -762,15 +794,12 @@ function renderList(){
   syncCard.className='card';
   syncCard.innerHTML = `
     <div style="font-size:12.5px; color:var(--ink-soft); line-height:1.6;">
-      ${usingSharedFile
-        ? 'このページと同じ場所にある questions2.json を読み込んでいます。他の端末でも同じURLを開けば同じ問題が見られます。'
-        : 'questions2.json が見つからなかったため、この端末内の保存データを表示しています。'}
+      ${syncStatus==='synced'
+        ? 'クラウドと同期済みです。他の端末で同じURLを開けば同じ問題が見られます。'
+        : '通信できていません。Wi-Fi/モバイル通信の状態を確認してください（この端末に保存済みの内容は表示されています）。'}
     </div>
-    <button class="btn outline" id="downloadJsonBtn" style="margin-top:10px; width:100%;">questions2.json をダウンロード</button>
-    <div style="font-size:11.5px; color:var(--ink-soft); margin-top:6px;">ダウンロード後、GitHubリポジトリの questions2.json を上書きアップロードすると、他の端末にも反映されます。</div>
   `;
   mainEl.appendChild(syncCard);
-  syncCard.querySelector('#downloadJsonBtn').addEventListener('click', downloadQuestionsJson);
 
   if(bank.length===0){
     const empty = document.createElement('div');
