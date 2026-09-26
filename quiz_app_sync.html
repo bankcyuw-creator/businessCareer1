@@ -369,7 +369,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyANasMCuhADCdGzMKa47hfiefTw3pO979w",
@@ -383,6 +383,7 @@ const EXAM_ID = 'exam1';
 
 const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
+enableIndexedDbPersistence(db).catch(()=>{ /* 複数タブや非対応ブラウザではキャッシュ無効のまま動作 */ });
 const bankDocRef = doc(db, 'questionBanks', EXAM_ID);
 
 let bank = [];
@@ -660,9 +661,17 @@ function renderStudy(){
         [order[i],order[j]]=[order[j],order[i]];
       }
     }
-    quizSession = { order, pos:0, correctCount:0, selected:null, revealed:false, finished:false };
+    quizSession = { order, pos:0, answers: new Array(order.length).fill(null), finished:false };
     renderStudy();
   });
+}
+
+function quizCorrectCount(){
+  return quizSession.order.reduce((sum, idx, i)=>{
+    const a = quizSession.answers[i];
+    if(a && bank[idx].correctIndex!==null && a.selected===bank[idx].correctIndex) return sum+1;
+    return sum;
+  }, 0);
 }
 
 async function deleteCurrentQuizQuestion(){
@@ -670,12 +679,10 @@ async function deleteCurrentQuizQuestion(){
   bank.splice(idx, 1);
   await saveBank();
   quizSession.order.splice(quizSession.pos, 1);
+  quizSession.answers.splice(quizSession.pos, 1);
   quizSession.order = quizSession.order.map(i => i > idx ? i - 1 : i);
   if(quizSession.order.length === 0 || quizSession.pos >= quizSession.order.length){
     quizSession.finished = true;
-  } else {
-    quizSession.selected = null;
-    quizSession.revealed = false;
   }
   renderStudy();
 }
@@ -684,10 +691,22 @@ function renderQuizQuestion(){
   const idx = quizSession.order[quizSession.pos];
   const q = bank[idx];
   const marks = ['ア','イ','ウ','エ'];
+  const answer = quizSession.answers[quizSession.pos]; // {selected} or null
+
+  const backBtn = document.createElement('button');
+  backBtn.textContent = '← 学習メニューに戻る';
+  backBtn.style.cssText = 'background:none; border:none; color:var(--ink-soft); font-size:12.5px; padding:0 0 12px; cursor:pointer; text-decoration:underline; font-family:inherit;';
+  backBtn.addEventListener('click', ()=>{
+    if(confirm('クイズを終了して学習メニューに戻ります。よろしいですか？')){
+      quizSession = null;
+      renderStudy();
+    }
+  });
+  mainEl.appendChild(backBtn);
 
   const progress = document.createElement('div');
   progress.className='progress';
-  progress.innerHTML = `<span>問題 ${quizSession.pos+1} / ${quizSession.order.length}</span><span>正解 ${quizSession.correctCount}</span>`;
+  progress.innerHTML = `<span>問題 ${quizSession.pos+1} / ${quizSession.order.length}</span><span>正解 ${quizCorrectCount()}</span>`;
   mainEl.appendChild(progress);
 
   const qcard = document.createElement('div');
@@ -701,15 +720,13 @@ function renderQuizQuestion(){
     const b = document.createElement('button');
     b.className='choice-btn';
     b.innerHTML = `<span class="mark">${marks[ci]}</span><span class="label-text">${escapeHtml(c)}</span>`;
-    if(quizSession.revealed){
+    if(answer){
       b.disabled = true;
       if(q.correctIndex===ci) b.classList.add('correct');
-      else if(quizSession.selected===ci) b.classList.add('wrong');
+      else if(answer.selected===ci) b.classList.add('wrong');
     } else {
       b.addEventListener('click', ()=>{
-        quizSession.selected = ci;
-        quizSession.revealed = true;
-        if(q.correctIndex!==null && ci===q.correctIndex) quizSession.correctCount++;
+        quizSession.answers[quizSession.pos] = { selected: ci };
         renderStudy();
       });
     }
@@ -717,9 +734,9 @@ function renderQuizQuestion(){
   });
   mainEl.appendChild(choicesWrap);
 
-  if(quizSession.revealed){
+  if(answer){
     const banner = document.createElement('div');
-    const isCorrect = q.correctIndex!==null && quizSession.selected===q.correctIndex;
+    const isCorrect = q.correctIndex!==null && answer.selected===q.correctIndex;
     banner.className = 'result-banner ' + (isCorrect?'ok':'ng');
     banner.style.marginTop='16px';
     banner.textContent = q.correctIndex===null ? '正解が未設定の問題です' : (isCorrect ? '正解' : '不正解 — 正解は「'+marks[q.correctIndex]+'」');
@@ -732,23 +749,36 @@ function renderQuizQuestion(){
       mainEl.appendChild(ex);
     }
 
+    const navRow = document.createElement('div');
+    navRow.style.cssText = 'display:flex; gap:8px; margin-top:16px;';
+
+    if(quizSession.pos > 0){
+      const prevBtn = document.createElement('button');
+      prevBtn.className='btn outline';
+      prevBtn.style.flex='1';
+      prevBtn.textContent = '← 前の問題';
+      prevBtn.addEventListener('click', ()=>{
+        quizSession.pos--;
+        renderStudy();
+      });
+      navRow.appendChild(prevBtn);
+    }
+
     const nextBtn = document.createElement('button');
     nextBtn.className='btn teal';
-    nextBtn.style.width='100%';
-    nextBtn.style.marginTop='16px';
+    nextBtn.style.flex='2';
     nextBtn.textContent = quizSession.pos+1 < quizSession.order.length ? '次の問題へ' : '結果を見る';
     nextBtn.addEventListener('click', ()=>{
       if(quizSession.pos+1 < quizSession.order.length){
         quizSession.pos++;
-        quizSession.selected = null;
-        quizSession.revealed = false;
         renderStudy();
       } else {
         quizSession.finished = true;
         renderStudy();
       }
     });
-    mainEl.appendChild(nextBtn);
+    navRow.appendChild(nextBtn);
+    mainEl.appendChild(navRow);
 
     const deleteBtn = document.createElement('button');
     deleteBtn.className='btn outline';
@@ -761,12 +791,22 @@ function renderQuizQuestion(){
       }
     });
     mainEl.appendChild(deleteBtn);
+  } else if(quizSession.pos > 0){
+    const prevBtn = document.createElement('button');
+    prevBtn.className='btn outline';
+    prevBtn.style.width='100%';
+    prevBtn.textContent = '← 前の問題に戻る';
+    prevBtn.addEventListener('click', ()=>{
+      quizSession.pos--;
+      renderStudy();
+    });
+    mainEl.appendChild(prevBtn);
   }
 }
 
 function renderQuizSummary(){
   const total = quizSession.order.length;
-  const correct = quizSession.correctCount;
+  const correct = quizCorrectCount();
   const rate = total? Math.round((correct/total)*100) : 0;
   const card = document.createElement('div');
   card.className='summary-card';
@@ -796,7 +836,7 @@ function renderList(){
     <div style="font-size:12.5px; color:var(--ink-soft); line-height:1.6;">
       ${syncStatus==='synced'
         ? 'クラウドと同期済みです。他の端末で同じURLを開けば同じ問題が見られます。'
-        : '通信できていません。Wi-Fi/モバイル通信の状態を確認してください（この端末に保存済みの内容は表示されています）。'}
+        : 'オフラインです。この端末に保存されている最新データを表示しています。変更は電波が戻り次第クラウドに反映されます。'}
     </div>
   `;
   mainEl.appendChild(syncCard);
